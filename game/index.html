@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>COLDSTORE — a tactical FPS in three.js</title>
 <style>
   :root{
@@ -101,6 +101,30 @@
   .controls{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;text-align:left;margin:20px auto 4px;
     font-size:14px;color:var(--dim);max-width:430px}
   .controls b{color:var(--ink);font-weight:600;white-space:nowrap}
+  .touchonly{display:none}
+  body.touch .touchonly{display:block}
+  /* PUBG-style touch controls: floating stick bottom-left, button cluster right */
+  #touchui{display:none;position:fixed;inset:0;z-index:30;pointer-events:none}
+  body.touch #touchui.on{display:block}
+  #stick{position:fixed;width:120px;height:120px;border:2px solid rgba(230,240,255,.35);border-radius:50%;
+    background:rgba(16,24,38,.25);opacity:0;transition:opacity .15s;pointer-events:none}
+  #stick.on{opacity:1}
+  #stickknob{position:absolute;left:34px;top:34px;width:52px;height:52px;border-radius:50%;
+    background:rgba(230,240,255,.45);border:2px solid rgba(230,240,255,.6)}
+  .tbtn{position:fixed;display:flex;align-items:center;justify-content:center;border-radius:50%;
+    border:2px solid rgba(230,240,255,.4);background:rgba(16,24,38,.38);color:#e8f1ff;
+    font:600 11px/1.1 system-ui,sans-serif;letter-spacing:.06em;text-align:center;
+    pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none}
+  .tbtn.on{background:rgba(120,180,255,.45)}
+  #t-fire{right:30px;bottom:104px;width:88px;height:88px;font-size:13px;border-color:rgba(255,150,120,.65)}
+  #t-aim{right:134px;bottom:66px;width:62px;height:62px}
+  #t-jump{right:24px;bottom:212px;width:62px;height:62px}
+  #t-crouch{right:106px;bottom:160px;width:56px;height:56px}
+  #t-reload{right:196px;bottom:128px;width:52px;height:52px}
+  #t-nade{right:172px;bottom:196px;width:52px;height:52px}
+  #t-swap{right:88px;bottom:238px;width:52px;height:52px}
+  #t-use{right:24px;top:120px;width:58px;height:58px}
+  #t-buy{right:96px;top:120px;width:58px;height:58px}
   .btn{display:inline-block;margin-top:22px;background:var(--amber);color:#161006;border:0;border-radius:7px;
     padding:13px 38px;font-size:17px;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase}
   .btn:hover{filter:brightness(1.1)} .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -200,6 +224,8 @@
       <b>Tab</b><span>Scoreboard</span>
     </div>
     <button class="btn" id="playbtn">Deploy</button>
+    <p class="tiny touchonly">Touch controls: left thumb stick to move (push to the rim to sprint),
+       drag the right side to aim, buttons to fire, jump, buy and defuse.</p>
     <p class="tiny">Runs fully offline. Sound on for callouts — the Runners talk, and so do your Wardens.</p>
   </div>
 </div>
@@ -211,6 +237,19 @@
     <p id="endstats"></p>
     <button class="btn" id="againbtn">Play again</button>
   </div>
+</div>
+
+<div id="touchui">
+  <div id="stick"><div id="stickknob"></div></div>
+  <div class="tbtn" id="t-fire">FIRE</div>
+  <div class="tbtn" id="t-aim">AIM</div>
+  <div class="tbtn" id="t-jump">JUMP</div>
+  <div class="tbtn" id="t-crouch">CROUCH</div>
+  <div class="tbtn" id="t-reload">RLD</div>
+  <div class="tbtn" id="t-nade">NADE</div>
+  <div class="tbtn" id="t-swap">SWAP</div>
+  <div class="tbtn" id="t-use">USE</div>
+  <div class="tbtn" id="t-buy">BUY</div>
 </div>
 
 <script type="module" src="./src/main.js"></script>

@@ -43,7 +43,7 @@ export function syncViewModel(f) {
 function speedCap(f) {
   if (f.crouching) return 2.3;
   if (f.scoped) return 2.6;
-  return down('ShiftLeft') || down('ShiftRight') ? 6.6 : 5.1;
+  return down('ShiftLeft') || down('ShiftRight') || input.touchSprint ? 6.6 : 5.1;
 }
 
 // Fixed-step update: look, move, fire. Called only in live-ish phases.
@@ -56,20 +56,22 @@ export function updatePlayer(f, dt) {
 
   if (!f.alive || (S.phase !== 'live' && S.phase !== 'planted')) { decayMotion(f, dt); return; }
 
-  f.crouching = down('ControlLeft') || down('ControlRight') || down('KeyC');
+  f.crouching = down('ControlLeft') || down('ControlRight') || down('KeyC') || input.touchCrouch;
   const height = f.crouching ? CFG.crouchHeight : CFG.height;
 
-  // wish direction in world space, from yaw
+  // wish direction in world space, from yaw — keys, or the touch stick,
+  // whose partial tilt gives partial speed
   let ix = 0, iz = 0;
   if (down('KeyW')) iz -= 1;
   if (down('KeyS')) iz += 1;
   if (down('KeyA')) ix -= 1;
   if (down('KeyD')) ix += 1;
-  const len = Math.hypot(ix, iz) || 1;
-  ix /= len; iz /= len;
+  ix += input.touchMove.x; iz -= input.touchMove.y;
+  const len = Math.hypot(ix, iz);
+  if (len > 1) { ix /= len; iz /= len; }
   const sin = Math.sin(f.yaw), cos = Math.cos(f.yaw);
-  const wx = ix * cos - iz * sin;
-  const wz = ix * sin + iz * cos;
+  const wx = ix * cos + iz * sin;
+  const wz = -ix * sin + iz * cos;
   const cap = speedCap(f);
   const accel = f.grounded ? 42 : 7;
   f.vel.x += clamp(wx * cap - f.vel.x, -accel * dt, accel * dt);

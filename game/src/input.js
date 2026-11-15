@@ -9,6 +9,10 @@ export const input = {
   fireHeld: false, aimHeld: false,
   locked: false,
   wheel: 0,
+  // touch (PUBG-style): analog stick axes, -1..1; y is forward
+  touchMove: { x: 0, y: 0 },
+  touchSprint: false,
+  touchCrouch: false,
 };
 
 let canvas = null;
@@ -42,6 +46,92 @@ export function initInput(cv) {
   });
   document.addEventListener('contextmenu', (e) => { if (input.locked) e.preventDefault(); });
   document.addEventListener('wheel', (e) => { if (input.locked) input.wheel += Math.sign(e.deltaY); }, { passive: true });
+}
+
+// ---- touch controls ---------------------------------------------------------
+// A floating left stick for movement (push it to the rim to sprint), drag
+// anywhere else on the right side to look, and a button cluster that feeds
+// the very same key/fire state the keyboard and mouse use — so the player
+// code never needs to know which device is driving.
+export function initTouch() {
+  const stick = document.getElementById('stick');
+  const knob = document.getElementById('stickknob');
+  let stickId = null, stickCX = 0, stickCY = 0;
+  let lookId = null, lookX = 0, lookY = 0;
+  let swapSlot = 'Digit2';
+
+  const hold = (id, on, off) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); el.classList.add('on'); on(); }, { passive: false });
+    const end = (e) => { e.preventDefault(); el.classList.remove('on'); off && off(); };
+    el.addEventListener('touchend', end, { passive: false });
+    el.addEventListener('touchcancel', end, { passive: false });
+  };
+  const tap = (id, fn) => hold(id, fn, null);
+  hold('t-fire', () => { input.fireHeld = true; }, () => { input.fireHeld = false; });
+  hold('t-aim', () => { input.aimHeld = true; }, () => { input.aimHeld = false; });
+  hold('t-use', () => { input.keys.add('KeyE'); }, () => { input.keys.delete('KeyE'); });
+  tap('t-jump', () => { input.justPressed.add('Space'); });
+  tap('t-reload', () => { input.justPressed.add('KeyR'); });
+  tap('t-nade', () => { input.justPressed.add('KeyG'); });
+  tap('t-buy', () => { input.justPressed.add('KeyB'); });
+  tap('t-swap', () => { input.justPressed.add(swapSlot); swapSlot = swapSlot === 'Digit2' ? 'Digit1' : 'Digit2'; });
+  tap('t-crouch', () => {
+    input.touchCrouch = !input.touchCrouch;
+    document.getElementById('t-crouch').classList.toggle('on', input.touchCrouch);
+  });
+
+  const onStart = (e) => {
+    let claimed = 0;
+    for (const t of e.changedTouches) {
+      if (t.target.closest && t.target.closest('.tbtn, #buy, #menu, #matchend, button')) continue;
+      if (t.clientX < window.innerWidth * 0.45 && stickId === null) {
+        stickId = t.identifier; stickCX = t.clientX; stickCY = t.clientY;
+        stick.style.left = (stickCX - 60) + 'px'; stick.style.top = (stickCY - 60) + 'px';
+        stick.classList.add('on');
+        knob.style.transform = 'translate(0px, 0px)';
+        claimed++;
+      } else if (lookId === null) {
+        lookId = t.identifier; lookX = t.clientX; lookY = t.clientY;
+        claimed++;
+      }
+    }
+    // Only a touch the game claimed may swallow the event — anything else
+    // (menu taps, buttons) must still produce its normal click.
+    if (claimed && e.cancelable) e.preventDefault();
+  };
+  const onMove = (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === stickId) {
+        let dx = t.clientX - stickCX, dy = t.clientY - stickCY;
+        const d = Math.hypot(dx, dy), max = 48;
+        if (d > max) { dx *= max / d; dy *= max / d; }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        input.touchMove.x = dx / max;
+        input.touchMove.y = -dy / max;
+        input.touchSprint = d > max * 0.92;
+      } else if (t.identifier === lookId) {
+        input.lookDX += (t.clientX - lookX) * 2.4;
+        input.lookDY += (t.clientY - lookY) * 2.4;
+        lookX = t.clientX; lookY = t.clientY;
+      }
+    }
+    if (e.cancelable) e.preventDefault();
+  };
+  const onEnd = (e) => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === stickId) {
+        stickId = null; stick.classList.remove('on');
+        input.touchMove.x = 0; input.touchMove.y = 0; input.touchSprint = false;
+      }
+      if (t.identifier === lookId) lookId = null;
+    }
+  };
+  document.addEventListener('touchstart', onStart, { passive: false });
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onEnd);
+  document.addEventListener('touchcancel', onEnd);
 }
 
 export function requestLock() {

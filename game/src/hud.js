@@ -50,6 +50,13 @@ export function initHUD() {
     return `<div class="buyitem" id="buy-${b.item}"><span class="key">${i + 1}</span>` +
       `<div class="nm">${d.name}</div><div class="ds">${b.desc}</div><div class="pr">$${d.price}</div></div>`;
   }).join('');
+  // the cards buy with a click too, not only with their number keys
+  for (const b of BUY_LIST) {
+    $('buy-' + b.item).addEventListener('click', () => {
+      if (!S.buyOpen) return;
+      if (buyItem(S.player, b.item)) { AU.beep(760, 0.05, 0.12); refreshBuyGrid(); }
+    });
+  }
   setUIHooks({
     banner: (title, sub, kind, dur) => showBanner(title, sub, kind, dur),
     matchEnd: () => showMatchEnd(),
@@ -175,11 +182,14 @@ export function updateHUD(dt) {
     els.bigmsg.textContent = ''; els.submsg.textContent = '';
   }
 
-  // defuse prompt and progress
+  // centre prompt: the pause hint wins, then the defuse prompt
   const bp = S.bomb.pos;
   const nearBomb = planted && bp && f.alive && Math.hypot(f.pos.x - bp.x, f.pos.z - bp.z) < 2.3;
-  els.interact.classList.toggle('hidden', !nearBomb);
-  if (nearBomb) {
+  els.interact.classList.toggle('hidden', !(S.paused || nearBomb));
+  if (S.paused) {
+    els.interacttext.textContent = 'Paused — click the game to resume';
+    els.progfill.style.width = '0%';
+  } else if (nearBomb) {
     els.interacttext.textContent = S.defusing ? 'Defusing…' : 'Hold to defuse the charge';
     els.progfill.style.width = Math.round((S.defuseFrac || 0) * 100) + '%';
   }

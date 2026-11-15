@@ -9,7 +9,7 @@ import { CFG, S, TEAM } from './state.js';
 // (CFG is re-exported on the test hook below so headless tests can shorten rounds)
 import { buildWorld, SITES } from './map.js';
 import { buildNav, EDGES, findPath, nearestNode } from './physics.js';
-import { initInput, input, pressed, requestLock, endFrame } from './input.js';
+import { initInput, initTouch, input, pressed, requestLock, endFrame } from './input.js';
 import { initAudio } from './audio.js';
 import { setupMatch, startMatch, updateRounds, updateBombVisual } from './rounds.js';
 import { updateBot, syncBotMesh } from './bots.js';
@@ -43,22 +43,36 @@ window.addEventListener('resize', resize);
 resize();
 
 // ---- screens ---------------------------------------------------------------
+// Touch devices (phones, tablets) get the PUBG-style analog controls and
+// never use pointer lock; desktop keeps the mouse-and-keyboard flow.
+const isTouch = window.matchMedia && matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (isTouch) { document.body.classList.add('touch'); initTouch(); }
+const touchUI = document.getElementById('touchui');
+
 const menuEl = document.getElementById('menu');
 document.getElementById('playbtn').addEventListener('click', () => {
   initAudio();
   menuEl.classList.add('hidden');
   document.getElementById('matchend').classList.add('hidden');
   startMatch();
-  requestLock();
+  if (!isTouch) requestLock();
 });
 document.getElementById('againbtn').addEventListener('click', () => {
   initAudio();
   document.getElementById('matchend').classList.add('hidden');
   startMatch();
-  requestLock();
+  if (!isTouch) requestLock();
 });
 canvas.addEventListener('click', () => {
-  if (S.mode === 'match' && !input.locked && !S.shot) requestLock();
+  if (!isTouch && S.mode === 'match' && !input.locked && !S.shot) requestLock();
+});
+// Losing pointer lock (Esc, alt-tab) pauses the match instead of letting
+// the round run on without the player; clicking back in resumes it. Only a
+// session that was locked can pause this way — touch play never locks.
+let everLocked = false;
+document.addEventListener('pointerlockchange', () => {
+  if (input.locked) everLocked = true;
+  S.paused = everLocked && S.mode === 'match' && !S.shot && !input.locked;
 });
 
 // ---- simulation --------------------------------------------------------------
@@ -142,7 +156,7 @@ if (shotKind) stageShot(shotKind);
 
 // Test hook: lets a headless browser drive and inspect a match while
 // play-testing (the same handle the screenshot staging above uses).
-window.__coldstore = { S, CFG, startMatch, nav: { EDGES, findPath, nearestNode } };
+window.__coldstore = { S, CFG, input, startMatch, nav: { EDGES, findPath, nearestNode } };
 
 // ---- frame loop ------------------------------------------------------------------
 let last = performance.now(), acc = 0;
@@ -166,6 +180,7 @@ function frame(now) {
   } else {
     menuCamera(now / 1000);
   }
+  if (touchUI) touchUI.classList.toggle('on', S.mode === 'match');
   updateBombVisual();
   FX.updateFX(dt);
   updateHUD(dt);
