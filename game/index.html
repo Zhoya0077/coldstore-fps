@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>COLDSTORE — a tactical FPS in three.js</title>
+<style>
+  :root{
+    --ink:#e8eef4; --dim:#9fb2c3; --amber:#ffb648; --frost:#7fd4ff; --blood:#ff5348;
+    --panel:rgba(10,16,22,.82); --panel2:rgba(16,24,32,.92); --line:rgba(127,212,255,.25);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0a0f14;
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);
+    -webkit-user-select:none;user-select:none}
+  #view{position:fixed;inset:0;display:block}
+  .hidden{display:none !important}
+
+  /* ---------- crosshair ---------- */
+  #cross{position:fixed;left:50%;top:50%;width:0;height:0;z-index:5;pointer-events:none}
+  #cross i{position:absolute;background:var(--ink);box-shadow:0 0 3px #000}
+  #cross .t{left:-1px;top:calc(-1 * var(--gap) - 9px);width:2px;height:9px}
+  #cross .b{left:-1px;top:var(--gap);width:2px;height:9px}
+  #cross .l{top:-1px;left:calc(-1 * var(--gap) - 9px);height:2px;width:9px}
+  #cross .r{top:-1px;left:var(--gap);height:2px;width:9px}
+  #cross .dot{left:-1px;top:-1px;width:2px;height:2px}
+  #hitmark{position:fixed;left:50%;top:50%;z-index:6;pointer-events:none;opacity:0;
+    transform:translate(-50%,-50%) rotate(45deg);width:18px;height:18px}
+  #hitmark i{position:absolute;background:#fff;box-shadow:0 0 4px #000}
+  #hitmark .a{left:8px;top:0;width:2px;height:6px}#hitmark .b{left:8px;bottom:0;width:2px;height:6px}
+  #hitmark .c{top:8px;left:0;height:2px;width:6px}#hitmark .d{top:8px;right:0;height:2px;width:6px}
+  #hitmark.kill i{background:var(--blood)}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:4;pointer-events:none}
+  #topbar{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:stretch;gap:10px}
+  .scorebox{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 14px;text-align:center;min-width:86px}
+  .scorebox .team{font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  .scorebox .score{font-size:24px;font-weight:700;line-height:1.05}
+  .scorebox.def .score{color:var(--frost)} .scorebox.atk .score{color:var(--amber)}
+  #clockbox{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 16px;text-align:center;min-width:96px}
+  #clock{font-size:24px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+  #clock.low{color:var(--blood)} #clock.planted{color:var(--amber)}
+  #phase{font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  #roundnum{position:absolute;top:14px;left:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;padding:8px 12px;font-size:12px;letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
+  #roundnum b{display:block;color:var(--ink);font-size:16px;letter-spacing:.02em}
+  #minimap{position:absolute;top:64px;left:16px;border:1px solid var(--line);border-radius:6px;background:rgba(8,12,16,.72)}
+  #alivebar{position:absolute;top:14px;right:16px;display:flex;gap:10px}
+  .pips{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;font-size:12px;color:var(--dim)}
+  .pips b{color:var(--ink);font-size:14px}
+  #feed{position:absolute;top:64px;right:16px;text-align:right;font-size:13px;line-height:1.5;text-shadow:0 1px 3px #000}
+  #feed .kf b.def{color:var(--frost)} #feed .kf b.atk{color:var(--amber)}
+  #feed .kf .hs{color:var(--blood);font-weight:700}
+  #bottomleft{position:absolute;left:16px;bottom:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;padding:10px 14px;min-width:210px}
+  #hpwrap{display:flex;align-items:baseline;gap:8px}
+  #hp{font-size:30px;font-weight:700;line-height:1}
+  #hp.low{color:var(--blood)}
+  .hplabel{font-size:11px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+  #hpbar{height:6px;background:#22303c;border-radius:3px;margin-top:6px;overflow:hidden}
+  #hpfill{height:100%;background:var(--frost);width:100%}
+  #armorline{margin-top:5px;font-size:12px;color:var(--dim)}
+  #armorline b{color:var(--ink)}
+  #bottomright{position:absolute;right:16px;bottom:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;padding:10px 14px;text-align:right;min-width:210px}
+  #weaponname{font-size:13px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+  #ammo{font-size:30px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums}
+  #ammo .res{font-size:16px;color:var(--dim)}
+  #ammo.low{color:var(--blood)}
+  #money{color:#8fe388;font-weight:700;font-size:16px}
+  #slots{margin-top:6px;font-size:12px;color:var(--dim);letter-spacing:.05em}
+  #slots b{color:var(--ink)}
+  #centermsg{position:absolute;left:50%;top:24%;transform:translateX(-50%);text-align:center;width:100%}
+  #bigmsg{font-size:40px;font-weight:800;letter-spacing:.06em;text-shadow:0 2px 14px #000;text-transform:uppercase}
+  #bigmsg.win{color:var(--frost)} #bigmsg.lose{color:var(--amber)} #bigmsg.info{color:var(--ink)}
+  #submsg{font-size:16px;color:var(--dim);margin-top:6px;text-shadow:0 1px 6px #000}
+  #interact{position:absolute;left:50%;top:58%;transform:translateX(-50%);text-align:center}
+  #interact .key{display:inline-block;border:1px solid var(--line);border-bottom-width:3px;border-radius:5px;
+    padding:2px 9px;background:var(--panel);font-weight:700}
+  #progwrap{width:260px;height:8px;background:#22303c;border-radius:4px;margin:8px auto 0;overflow:hidden}
+  #progfill{height:100%;background:var(--amber);width:0%}
+  #dmgvin{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:0;
+    background:radial-gradient(ellipse at center,transparent 55%,rgba(255,30,20,.45) 100%)}
+  #flashvin{position:fixed;inset:0;z-index:8;pointer-events:none;opacity:0;background:#fff}
+  #scopevin{position:fixed;inset:0;z-index:3;pointer-events:none;opacity:0;
+    background:radial-gradient(circle at center,transparent 26%,#000 27.5%)}
+  #buyprompt{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);background:var(--panel);
+    border:1px solid var(--line);border-radius:6px;padding:7px 14px;font-size:14px}
+
+  /* ---------- overlays / menus ---------- */
+  .screen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+    background:rgba(5,9,13,.55);backdrop-filter:blur(2px)}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:34px 44px;
+    max-width:640px;width:92%;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.6)}
+  .card h1{font-size:44px;letter-spacing:.18em;font-weight:800}
+  .card h1 .cold{color:var(--frost)} .card h1 .store{color:var(--amber)}
+  .card h2{font-size:15px;letter-spacing:.22em;color:var(--dim);text-transform:uppercase;margin-top:4px;font-weight:600}
+  .card p{color:var(--dim);line-height:1.55;margin-top:14px;font-size:15px}
+  .card p b{color:var(--ink)}
+  .controls{display:grid;grid-template-columns:auto 1fr;gap:5px 16px;text-align:left;margin:20px auto 4px;
+    font-size:14px;color:var(--dim);max-width:430px}
+  .controls b{color:var(--ink);font-weight:600;white-space:nowrap}
+  .btn{display:inline-block;margin-top:22px;background:var(--amber);color:#161006;border:0;border-radius:7px;
+    padding:13px 38px;font-size:17px;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase}
+  .btn:hover{filter:brightness(1.1)} .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+  #buy{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(5,9,13,.45)}
+  #buycard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:22px 26px;width:760px;max-width:94%}
+  #buycard h3{font-size:19px;letter-spacing:.12em;text-transform:uppercase}
+  #buycard h3 span{color:#8fe388;float:right;letter-spacing:0}
+  #buygrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+  .buyitem{border:1px solid var(--line);border-radius:8px;padding:11px 13px;background:rgba(255,255,255,.03);text-align:left}
+  .buyitem .nm{font-weight:700;font-size:15px}
+  .buyitem .ds{color:var(--dim);font-size:12px;margin-top:2px;line-height:1.4}
+  .buyitem .pr{color:#8fe388;font-weight:700;margin-top:6px;font-size:14px}
+  .buyitem .key{float:right;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:0 6px;font-size:12px}
+  .buyitem.owned{border-color:rgba(143,227,136,.55)} .buyitem.owned .pr{color:var(--dim)}
+  .buyitem.cant{opacity:.45}
+  #buyhint{color:var(--dim);font-size:13px;margin-top:12px;text-align:center}
+  #scoreboard{position:fixed;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;background:rgba(5,9,13,.45)}
+  #sbcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:22px 30px;width:620px;max-width:94%}
+  #sbcard h3{text-align:center;letter-spacing:.14em;text-transform:uppercase;font-size:17px}
+  #sbcard table{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+  #sbcard th{color:var(--dim);text-align:left;font-weight:600;padding:5px 8px;border-bottom:1px solid var(--line)}
+  #sbcard td{padding:5px 8px;border-bottom:1px solid rgba(127,212,255,.08)}
+  #sbcard .def{color:var(--frost)} #sbcard .atk{color:var(--amber)}
+  #sbcard tr.dead td{opacity:.45}
+  .tiny{font-size:12px;color:var(--dim);margin-top:14px}
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="dmgvin"></div>
+<div id="scopevin"></div>
+<div id="flashvin"></div>
+
+<div id="hud" class="hidden">
+  <div id="roundnum">Round<b id="roundval">1 / 12</b></div>
+  <canvas id="minimap" width="176" height="132"></canvas>
+  <div id="topbar">
+    <div class="scorebox def"><div class="team">Wardens</div><div class="score" id="scoredef">0</div></div>
+    <div id="clockbox"><div id="clock">1:45</div><div id="phase">Buy phase</div></div>
+    <div class="scorebox atk"><div class="team">Runners</div><div class="score" id="scoreatk">0</div></div>
+  </div>
+  <div id="alivebar">
+    <div class="pips">Wardens <b id="alivedef">5</b></div>
+    <div class="pips">Runners <b id="aliveatk">5</b></div>
+  </div>
+  <div id="feed"></div>
+  <div id="centermsg"><div id="bigmsg"></div><div id="submsg"></div></div>
+  <div id="interact" class="hidden"><span class="key">E</span> <span id="interacttext">Defuse the charge</span>
+    <div id="progwrap"><div id="progfill"></div></div></div>
+  <div id="bottomleft">
+    <div id="hpwrap"><span id="hp">100</span><span class="hplabel">Health</span></div>
+    <div id="hpbar"><div id="hpfill"></div></div>
+    <div id="armorline">Armor <b id="armor">0</b> &nbsp;·&nbsp; Kit <b id="kit">—</b></div>
+  </div>
+  <div id="bottomright">
+    <div id="weaponname">P9 Sidearm</div>
+    <div id="ammo">12 <span class="res">/ 100</span></div>
+    <div><span id="money">$800</span></div>
+    <div id="slots"></div>
+  </div>
+  <div id="buyprompt" class="hidden">Press <b>B</b> to buy equipment</div>
+</div>
+
+<div id="cross" class="hidden"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="dot"></i></div>
+<div id="hitmark"><i class="a"></i><i class="b"></i><i class="c"></i><i class="d"></i></div>
+
+<div id="buy" class="hidden">
+  <div id="buycard">
+    <h3>Buy equipment <span id="buymoney">$800</span></h3>
+    <div id="buygrid"></div>
+    <div id="buyhint">Press the number key or B / Esc to close — buying is open during the buy phase</div>
+  </div>
+</div>
+
+<div id="scoreboard" class="hidden"><div id="sbcard"><h3 id="sbtitle">Coldstore</h3><div id="sbbody"></div></div></div>
+
+<div id="menu" class="screen">
+  <div class="card">
+    <h1><span class="cold">COLD</span><span class="store">STORE</span></h1>
+    <h2>A tactical FPS in three.js</h2>
+    <p>You hold the cold-storage depot for the <b>Wardens</b>. The <b>Runners</b> are coming to plant a
+       breach charge on the <b>Freezer (A)</b> or the <b>Dock (B)</b>. Win rounds by eliminating them,
+       stopping the plant, or defusing the charge. First team to <b>7 rounds</b> takes the match.</p>
+    <div class="controls">
+      <b>W A S D</b><span>Move (Shift sprint, Ctrl / C crouch, Space jump)</span>
+      <b>Mouse</b><span>Look — click the game to capture the mouse</span>
+      <b>Left click</b><span>Fire (hold for automatics) · <b>Right click</b> scope the Needle</span>
+      <b>R</b><span>Reload</span>
+      <b>1 · 2 · 3 · 4</b><span>Primary · sidearm · frag / flash / smoke cycle</span>
+      <b>G</b><span>Throw grenade</span>
+      <b>B</b><span>Buy menu (buy phase)</span>
+      <b>E</b><span>Defuse (hold, near a planted charge)</span>
+      <b>Tab</b><span>Scoreboard</span>
+    </div>
+    <button class="btn" id="playbtn">Deploy</button>
+    <p class="tiny">Runs fully offline. Sound on for callouts — the Runners talk, and so do your Wardens.</p>
+  </div>
+</div>
+
+<div id="matchend" class="screen hidden">
+  <div class="card">
+    <h1 id="endtitle">WARDENS WIN</h1>
+    <h2 id="endsub">The depot holds.</h2>
+    <p id="endstats"></p>
+    <button class="btn" id="againbtn">Play again</button>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
