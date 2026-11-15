@@ -12,6 +12,7 @@ export const input = {
   // touch (PUBG-style): analog stick axes, -1..1; y is forward
   touchMove: { x: 0, y: 0 },
   touchSprint: false,
+  touchSprintLatch: false,
   touchCrouch: false,
 };
 
@@ -49,10 +50,12 @@ export function initInput(cv) {
 }
 
 // ---- touch controls ---------------------------------------------------------
-// A floating left stick for movement (push it to the rim to sprint), drag
-// anywhere else on the right side to look, and a button cluster that feeds
-// the very same key/fire state the keyboard and mouse use — so the player
-// code never needs to know which device is driving.
+// The layout follows the mobile-shooter standard (Free Fire / PUBG Mobile):
+// a fixed analog stick bottom-left with a sprint button above it, a big
+// fire button bottom-right with aim/jump/crouch around it, drag anywhere
+// else on the right side to look. Every control feeds the very same
+// key/fire state the keyboard and mouse use — the player code never needs
+// to know which device is driving.
 export function initTouch() {
   const stick = document.getElementById('stick');
   const knob = document.getElementById('stickknob');
@@ -81,16 +84,21 @@ export function initTouch() {
     input.touchCrouch = !input.touchCrouch;
     document.getElementById('t-crouch').classList.toggle('on', input.touchCrouch);
   });
+  tap('t-sprint', () => {
+    input.touchSprintLatch = !input.touchSprintLatch;
+    document.getElementById('t-sprint').classList.toggle('on', input.touchSprintLatch);
+  });
 
   const onStart = (e) => {
     let claimed = 0;
     for (const t of e.changedTouches) {
       if (t.target.closest && t.target.closest('.tbtn, #buy, #menu, #matchend, button')) continue;
       if (t.clientX < window.innerWidth * 0.45 && stickId === null) {
-        stickId = t.identifier; stickCX = t.clientX; stickCY = t.clientY;
-        stick.style.left = (stickCX - 60) + 'px'; stick.style.top = (stickCY - 60) + 'px';
+        // the stick base is fixed; the drag vector is measured from its centre
+        stickId = t.identifier;
+        const r = stick.getBoundingClientRect();
+        stickCX = r.left + r.width / 2; stickCY = r.top + r.height / 2;
         stick.classList.add('on');
-        knob.style.transform = 'translate(0px, 0px)';
         claimed++;
       } else if (lookId === null) {
         lookId = t.identifier; lookX = t.clientX; lookY = t.clientY;
@@ -105,7 +113,7 @@ export function initTouch() {
     for (const t of e.changedTouches) {
       if (t.identifier === stickId) {
         let dx = t.clientX - stickCX, dy = t.clientY - stickCY;
-        const d = Math.hypot(dx, dy), max = 48;
+        const d = Math.hypot(dx, dy), max = 52;
         if (d > max) { dx *= max / d; dy *= max / d; }
         knob.style.transform = `translate(${dx}px, ${dy}px)`;
         input.touchMove.x = dx / max;
@@ -123,6 +131,7 @@ export function initTouch() {
     for (const t of e.changedTouches) {
       if (t.identifier === stickId) {
         stickId = null; stick.classList.remove('on');
+        knob.style.transform = 'translate(0px, 0px)';
         input.touchMove.x = 0; input.touchMove.y = 0; input.touchSprint = false;
       }
       if (t.identifier === lookId) lookId = null;

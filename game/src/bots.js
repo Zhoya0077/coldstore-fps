@@ -267,7 +267,18 @@ export function updateBot(f, dt) {
   const phase = S.phase;
   let moving = false;
   if (phase === 'live' || phase === 'planted') {
-    if (b.seen && S.time - b.seenT < 0.4 && b.seen.alive) {
+    // A carrier who has reached his site commits to the plant: he breaks
+    // off only for an enemy close enough to rush him. Without this, any
+    // defender in sight turns the site into a firefight and the charge
+    // never goes down at all.
+    let commit = false;
+    if (phase === 'live' && f.team === TEAM.ATK && S.bomb.carrier === f && b.seen) {
+      const site = SITES[b.site];
+      const dSite = Math.hypot(f.pos.x - site.x, f.pos.z - site.z);
+      const dFoe = Math.hypot(b.seen.pos.x - f.pos.x, b.seen.pos.z - f.pos.z);
+      commit = dSite < site.r + 2.5 && dFoe > 9;
+    }
+    if (!commit && b.seen && S.time - b.seenT < 0.4 && b.seen.alive) {
       engage(f, dt); moving = true;
     } else if (f.team === TEAM.ATK) moving = atkBrain(f, dt);
     else moving = defBrain(f, dt);
@@ -307,9 +318,10 @@ function atkBrain(f, dt) {
   if (S.bomb.carrier === f) {
     const d = Math.hypot(f.pos.x - site.x, f.pos.z - site.z);
     if (d < site.r - 1.2) {
-      // inside the site: channel the plant (rounds.js watches plantT)
+      // inside the site: channel the plant (rounds.js watches plantT),
+      // kneeling at the charge
       dampen(f, dt);
-      f.crouching = false;
+      f.crouching = true;
       b.plantT += dt;
       return true;
     }

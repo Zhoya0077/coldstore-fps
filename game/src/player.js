@@ -43,7 +43,7 @@ export function syncViewModel(f) {
 function speedCap(f) {
   if (f.crouching) return 2.3;
   if (f.scoped) return 2.6;
-  return down('ShiftLeft') || down('ShiftRight') || input.touchSprint ? 6.6 : 5.1;
+  return down('ShiftLeft') || down('ShiftRight') || input.touchSprint || input.touchSprintLatch ? 6.6 : 5.1;
 }
 
 // Fixed-step update: look, move, fire. Called only in live-ish phases.

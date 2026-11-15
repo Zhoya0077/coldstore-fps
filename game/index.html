@@ -103,28 +103,44 @@
   .controls b{color:var(--ink);font-weight:600;white-space:nowrap}
   .touchonly{display:none}
   body.touch .touchonly{display:block}
-  /* PUBG-style touch controls: floating stick bottom-left, button cluster right */
+  /* Mobile-shooter touch layout (Free Fire / PUBG Mobile arrangement):
+     fixed stick bottom-left with sprint above it, fire cluster bottom-right,
+     weapon panel and minimap pushed to the top corners, HP bottom-centre */
   #touchui{display:none;position:fixed;inset:0;z-index:30;pointer-events:none}
   body.touch #touchui.on{display:block}
-  #stick{position:fixed;width:120px;height:120px;border:2px solid rgba(230,240,255,.35);border-radius:50%;
-    background:rgba(16,24,38,.25);opacity:0;transition:opacity .15s;pointer-events:none}
+  #stick{position:fixed;left:24px;bottom:78px;width:132px;height:132px;border:2px solid rgba(230,240,255,.35);
+    border-radius:50%;background:rgba(16,24,38,.25);opacity:.55;transition:opacity .15s;pointer-events:none}
   #stick.on{opacity:1}
-  #stickknob{position:absolute;left:34px;top:34px;width:52px;height:52px;border-radius:50%;
+  #stickknob{position:absolute;left:38px;top:38px;width:56px;height:56px;border-radius:50%;
     background:rgba(230,240,255,.45);border:2px solid rgba(230,240,255,.6)}
   .tbtn{position:fixed;display:flex;align-items:center;justify-content:center;border-radius:50%;
     border:2px solid rgba(230,240,255,.4);background:rgba(16,24,38,.38);color:#e8f1ff;
     font:600 11px/1.1 system-ui,sans-serif;letter-spacing:.06em;text-align:center;
     pointer-events:auto;user-select:none;-webkit-user-select:none;touch-action:none}
   .tbtn.on{background:rgba(120,180,255,.45)}
-  #t-fire{right:30px;bottom:104px;width:88px;height:88px;font-size:13px;border-color:rgba(255,150,120,.65)}
-  #t-aim{right:134px;bottom:66px;width:62px;height:62px}
-  #t-jump{right:24px;bottom:212px;width:62px;height:62px}
-  #t-crouch{right:106px;bottom:160px;width:56px;height:56px}
-  #t-reload{right:196px;bottom:128px;width:52px;height:52px}
-  #t-nade{right:172px;bottom:196px;width:52px;height:52px}
-  #t-swap{right:88px;bottom:238px;width:52px;height:52px}
-  #t-use{right:24px;top:120px;width:58px;height:58px}
-  #t-buy{right:96px;top:120px;width:58px;height:58px}
+  #t-sprint{left:172px;bottom:200px;width:56px;height:56px}
+  #t-fire{right:30px;bottom:92px;width:98px;height:98px;font-size:14px;border-color:rgba(255,150,120,.65)}
+  #t-aim{right:120px;bottom:200px;width:66px;height:66px}
+  #t-jump{right:206px;bottom:196px;width:60px;height:60px}
+  #t-crouch{right:146px;bottom:104px;width:60px;height:60px}
+  #t-nade{right:300px;bottom:158px;width:54px;height:54px}
+  #t-reload{right:242px;bottom:96px;width:54px;height:54px}
+  #t-swap{right:330px;bottom:80px;width:54px;height:54px}
+  #t-use{right:10px;top:124px;width:48px;height:48px}
+  #t-buy{right:66px;top:124px;width:48px;height:48px}
+  body.touch #roundnum{display:none}
+  body.touch #minimap{top:58px;left:10px;width:218px;height:164px}
+  body.touch .scorebox{min-width:62px;padding:4px 8px}
+  body.touch .scorebox .score{font-size:19px}
+  body.touch #clockbox{min-width:76px;padding:4px 10px}
+  body.touch #clock{font-size:19px}
+  body.touch #bottomleft{left:50%;right:auto;transform:translateX(-50%);bottom:12px;min-width:250px;text-align:center}
+  body.touch #hpwrap{justify-content:center}
+  body.touch #bottomright{top:52px;bottom:auto;right:10px;min-width:168px;padding:8px 12px}
+  body.touch #slots{display:none}
+  body.touch #ammo{font-size:24px}
+  body.touch #feed{top:230px}
+  body.touch #buyprompt{bottom:190px}
   .btn{display:inline-block;margin-top:22px;background:var(--amber);color:#161006;border:0;border-radius:7px;
     padding:13px 38px;font-size:17px;font-weight:800;letter-spacing:.08em;cursor:pointer;text-transform:uppercase}
   .btn:hover{filter:brightness(1.1)} .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
@@ -224,8 +240,8 @@
       <b>Tab</b><span>Scoreboard</span>
     </div>
     <button class="btn" id="playbtn">Deploy</button>
-    <p class="tiny touchonly">Touch controls: left thumb stick to move (push to the rim to sprint),
-       drag the right side to aim, buttons to fire, jump, buy and defuse.</p>
+    <p class="tiny touchonly">Touch controls: left thumb stick to move (push to the rim, or tap RUN, to sprint),
+       drag the right side to aim, buttons to fire, jump, crouch, buy and defuse.</p>
     <p class="tiny">Runs fully offline. Sound on for callouts — the Runners talk, and so do your Wardens.</p>
   </div>
 </div>
@@ -241,6 +257,7 @@
 
 <div id="touchui">
   <div id="stick"><div id="stickknob"></div></div>
+  <div class="tbtn" id="t-sprint">RUN</div>
   <div class="tbtn" id="t-fire">FIRE</div>
   <div class="tbtn" id="t-aim">AIM</div>
   <div class="tbtn" id="t-jump">JUMP</div>

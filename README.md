@@ -21,6 +21,14 @@ node serve.ts        # then open http://localhost:8080
 
 Click **Deploy**, then click the game to capture the mouse.
 
+On a phone or tablet the game switches to a mobile-shooter touch layout
+(the Free Fire / PUBG Mobile arrangement): a fixed left thumb stick with a
+sprint button above it (push the stick to the rim, or latch RUN), drag the
+right side of the screen to aim, and a button cluster around the big fire
+button — aim, jump, crouch, reload, grenades, weapon swap, buy and defuse.
+The minimap grows, the weapon panel moves to the top-right and the health
+bar to the bottom-centre. The buy cards are clickable on every platform.
+
 | Key | Action |
 | --- | --- |
 | W A S D / Shift / Ctrl·C / Space | Move / sprint / crouch / jump |
